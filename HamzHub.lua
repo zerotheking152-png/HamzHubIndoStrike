@@ -1,159 +1,166 @@
--- INDO STRIKE AUTO FISH + BLATI GUI (2026)
--- Execute pake executor lo (Fluxus/Delta/Wave/Solara dll)
+-- INDO STRIKE HMZ HUB - FLUENT UI + MINIMIZE HMZ (H Biru - M Kuning - Z Merah)
+-- Execute di Fluxus/Delta/Wave/Solara dll
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
+local Fluent = loadstring(game:HttpGet("https://github.com/dawid-scripts/Fluent/releases/latest/download/main.lua"))()
 
--- === REMOTES ===
-local throwRemote = ReplicatedStorage:WaitForChild("Fishing_RemoteThrow")
-local fishingFolder = ReplicatedStorage:WaitForChild("Fishing")
-local toServer = fishingFolder:WaitForChild("ToServer")
+-- === REMOTES & HOOK SESSION ID ===
+local rs = game:GetService("ReplicatedStorage")
+local throwRemote = rs:WaitForChild("Fishing_RemoteThrow")
+local fishing = rs:WaitForChild("Fishing")
+local toServer = fishing:WaitForChild("ToServer")
 local minigameStarted = toServer:WaitForChild("MinigameStarted")
 local reelFinished = toServer:WaitForChild("ReelFinished")
 
--- === SESSION ID HOOK ===
 local sessionID = nil
-local oldNamecall
-oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
+local oldNamecall = hookmetamethod(game, "__namecall", newcclosure(function(self, ...)
     if getnamecallmethod() == "FireServer" and self == throwRemote then
         local args = {...}
         if typeof(args[2]) == "string" and #args[2] > 20 then
             sessionID = args[2]
-            print("✅ Session ID captured: " .. sessionID)
         end
     end
     return oldNamecall(self, ...)
 end))
 
--- === FLAGS ===
-getgenv().AutoFish = false
-getgenv().Blati = false
+-- === FLUENT WINDOW ===
+local Window = Fluent:CreateWindow({
+    Title = "HMZ Hub | Indo Strike",
+    SubTitle = "Auto Fish + Blati",
+    TabWidth = 180,
+    Size = UDim2.fromOffset(580, 460),
+    Acrylic = true,
+    Theme = "Dark",
+    MinimizeKey = Enum.KeyCode.RightShift  -- tekan RightShift juga bisa minimize
+})
 
--- === GUI ===
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "IndoStrikeGUI"
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
-ScreenGui.ResetOnSpawn = false
+local MainTab = Window:AddTab({ Title = "Main Features" })
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Size = UDim2.new(0, 320, 0, 220)
-MainFrame.Position = UDim2.new(0.5, -160, 0.4, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-MainFrame.BorderSizePixel = 0
-MainFrame.Parent = ScreenGui
+-- === AUTO FISH TOGGLE ===
+local AutoFishEnabled = false
+local autoFishLoop = nil
 
--- Draggable
-local dragging, dragInput, dragStart, startPos
-MainFrame.InputBegan:Connect(function(input)
+MainTab:AddToggle("AutoFish", {
+    Title = "Auto Fish (Instant Catch)",
+    Default = false,
+    Callback = function(Value)
+        AutoFishEnabled = Value
+        if Value then
+            if not sessionID then
+                Fluent:Notify({
+                    Title = "Info",
+                    Content = "Cast manual 1x pake rod dulu biar sessionID ke-capture!",
+                    Duration = 5
+                })
+            end
+            autoFishLoop = task.spawn(function()
+                while AutoFishEnabled do
+                    if sessionID then
+                        throwRemote:FireServer(0, sessionID)
+                        task.wait(0.7)
+                        minigameStarted:FireServer(sessionID)
+                        task.wait(0.3)
+                        
+                        local successArgs = {
+                            ["duration"] = math.random(7.5, 12.5),
+                            ["result"] = "SUCCESS",
+                            ["insideRatio"] = 0.8 + (math.random(3, 18) / 100)
+                        }
+                        reelFinished:FireServer(successArgs, sessionID)
+                        task.wait(1.5)
+                    else
+                        task.wait(0.5)
+                    end
+                end
+            end)
+        else
+            if autoFishLoop then task.cancel(autoFishLoop) end
+        end
+    end
+})
+
+-- === BLATI TOGGLE (siap diisi nanti) ===
+MainTab:AddToggle("Blati", {
+    Title = "Blati Mode",
+    Default = false,
+    Callback = function(Value)
+        if Value then
+            Fluent:Notify({Title = "Blati", Content = "Blati ON! (tambahin logic remote lo di sini)", Duration = 3})
+            -- <<< TEMPAT LOGIC BLATI LO NANTI >>>
+        else
+            Fluent:Notify({Title = "Blati", Content = "Blati OFF", Duration = 3})
+        end
+    end
+})
+
+-- === MINIMIZE BUTTON + CUSTOM HMZ UI ===
+MainTab:AddButton({
+    Title = "Minimize to HMZ Icon",
+    Description = "Klik ini → GUI ilang, tinggal HMZ kecil",
+    Callback = function()
+        Window:Minimize()
+        HMZFrame.Visible = true
+    end
+})
+
+-- === CUSTOM MINIMIZE UI (HMZ) ===
+local HMZFrame = Instance.new("Frame")
+HMZFrame.Size = UDim2.new(0, 120, 0, 40)
+HMZFrame.Position = UDim2.new(1, -140, 1, -60)
+HMZFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+HMZFrame.BorderSizePixel = 0
+HMZFrame.Visible = false
+HMZFrame.Parent = game.Players.LocalPlayer:WaitForChild("PlayerGui")
+
+-- Corner + Stroke biar keren
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = HMZFrame
+
+local Stroke = Instance.new("UIStroke")
+Stroke.Color = Color3.fromRGB(255, 255, 255)
+Stroke.Thickness = 2
+Stroke.Parent = HMZFrame
+
+-- Tulisan HMZ (H Biru, M Kuning, Z Merah)
+local HMZLabel = Instance.new("TextLabel")
+HMZLabel.Size = UDim2.new(1, 0, 1, 0)
+HMZLabel.BackgroundTransparency = 1
+HMZLabel.Text = '<font color="rgb(0,162,255)">H</font><font color="rgb(255,215,0)">M</font><font color="rgb(255,50,50)">Z</font>'
+HMZLabel.TextScaled = true
+HMZLabel.RichText = true
+HMZLabel.Font = Enum.Font.GothamBold
+HMZLabel.TextColor3 = Color3.new(1,1,1)
+HMZLabel.Parent = HMZFrame
+
+-- Draggable HMZ
+local dragging = false
+HMZFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
         dragStart = input.Position
-        startPos = MainFrame.Position
+        startPos = HMZFrame.Position
     end
 end)
-MainFrame.InputChanged:Connect(function(input)
+HMZFrame.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        HMZFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
     end
 end)
 game:GetService("UserInputService").InputEnded:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
 end)
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 50)
-Title.BackgroundTransparency = 1
-Title.Text = "INDO STRIKE AUTO"
-Title.TextColor3 = Color3.fromRGB(0, 255, 100)
-Title.TextScaled = true
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
-
-local AutoFishBtn = Instance.new("TextButton")
-AutoFishBtn.Size = UDim2.new(0.9, 0, 0, 45)
-AutoFishBtn.Position = UDim2.new(0.05, 0, 0.35, 0)
-AutoFishBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-AutoFishBtn.Text = "Auto Fish: OFF"
-AutoFishBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-AutoFishBtn.TextScaled = true
-AutoFishBtn.Font = Enum.Font.GothamSemibold
-AutoFishBtn.Parent = MainFrame
-
-local BlatiBtn = Instance.new("TextButton")
-BlatiBtn.Size = UDim2.new(0.9, 0, 0, 45)
-BlatiBtn.Position = UDim2.new(0.05, 0, 0.62, 0)
-BlatiBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-BlatiBtn.Text = "Blati: OFF"
-BlatiBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-BlatiBtn.TextScaled = true
-BlatiBtn.Font = Enum.Font.GothamSemibold
-BlatiBtn.Parent = MainFrame
-
-local Status = Instance.new("TextLabel")
-Status.Size = UDim2.new(1, 0, 0, 30)
-Status.Position = UDim2.new(0, 0, 0.88, 0)
-Status.BackgroundTransparency = 1
-Status.Text = "Cast manual 1x dulu pake rod biasa!"
-Status.TextColor3 = Color3.fromRGB(255, 200, 0)
-Status.TextScaled = true
-Status.Font = Enum.Font.Gotham
-Status.Parent = MainFrame
-
--- === TOGGLE LOGIC ===
-local autoFishLoop
-
-local function startAutoFish()
-    if autoFishLoop then return end
-    autoFishLoop = task.spawn(function()
-        while getgenv().AutoFish do
-            if sessionID then
-                throwRemote:FireServer(0, sessionID)
-                task.wait(0.7)
-                minigameStarted:FireServer(sessionID)
-                task.wait(0.3)
-                
-                local successArgs = {
-                    ["duration"] = math.random(7.5, 12.5),
-                    ["result"] = "SUCCESS",
-                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100)
-                }
-                reelFinished:FireServer(successArgs, sessionID)
-                task.wait(1.5)
-            else
-                task.wait(0.5)
-            end
-        end
-    end)
-end
-
-AutoFishBtn.MouseButton1Click:Connect(function()
-    getgenv().AutoFish = not getgenv().AutoFish
-    if getgenv().AutoFish then
-        AutoFishBtn.Text = "Auto Fish: ON"
-        AutoFishBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        startAutoFish()
-        Status.Text = "Auto Fish JALAN 🔥"
-    else
-        AutoFishBtn.Text = "Auto Fish: OFF"
-        AutoFishBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-        Status.Text = "Auto Fish OFF"
-        if autoFishLoop then task.cancel(autoFishLoop) autoFishLoop = nil end
-    end
+-- Klik HMZ → Restore GUI
+HMZLabel.MouseButton1Click:Connect(function()
+    Window:Restore()
+    HMZFrame.Visible = false
 end)
 
-BlatiBtn.MouseButton1Click:Connect(function()
-    getgenv().Blati = not getgenv().Blati
-    if getgenv().Blati then
-        BlatiBtn.Text = "Blati: ON"
-        BlatiBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-        print("🔥 Blati MODE ON (tambahin logic Blati lo di sini)")
-        -- <<< TAMBAHIN CODE BLATI LO DI SINI NANTI >>>
-    else
-        BlatiBtn.Text = "Blati: OFF"
-        BlatiBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
-    end
-end)
+Fluent:Notify({
+    Title = "HMZ Hub Loaded!",
+    Content = "Cast manual 1x dulu biar Auto Fish jalan. Minimize pake tombol atau RightShift.",
+    Duration = 6
+})
 
-print("🎉 GUI Indo Strike udah muncul! Cast manual 1x dulu biar sessionID ke-capture.")
+print("🎉 HMZ Fluent GUI siap! H Biru - M Kuning - Z Merah")
