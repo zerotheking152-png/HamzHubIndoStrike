@@ -1,123 +1,98 @@
--- hamzHub v1.0
--- By: anjay
--- Game: Fishzar (Fishing System Exploit)
--- Fitur: Blati = Instant Fishing (Auto Pull + Precalc + Cleanup)
--- Cara pakai: Inject pake executor (Synapse, Fluxus, dll), jalankan script ini
+-- FISHZAR Pulau Nelayan Auto Fish + Kavo UI
+-- Jalankan di executor seperti Delta, Fluxus, dll
 
-local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local player = Players.LocalPlayer
+local RS = game:GetService("ReplicatedStorage")
+local FishingSys = RS:WaitForChild("FishingSystem")
 
--- ==================== GUI ====================
-local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "hamzHub"
-ScreenGui.ResetOnSpawn = false
-ScreenGui.Parent = player:WaitForChild("PlayerGui")
+local CleanupCast   = FishingSys:WaitForChild("CleanupCast")
+local FishGiver     = FishingSys:WaitForChild("FishGiver")
+local ReplicatePull = FishingSys:WaitForChild("ReplicatePullAlert")
+local CastRepli     = FishingSys:WaitForChild("CastReplication")
 
-local MainFrame = Instance.new("Frame")
-MainFrame.Name = "Main"
-MainFrame.Size = UDim2.new(0, 320, 0, 180)
-MainFrame.Position = UDim2.new(0.5, -160, 0.3, 0)
-MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-MainFrame.BorderSizePixel = 0
-MainFrame.Active = true
-MainFrame.Draggable = true
-MainFrame.Parent = ScreenGui
+-- Setting posisi cast (ganti sesuai spot lo, contoh dari spill sebelumnya)
+local CAST_POSITION = Vector3.new(-135.43, 3.43, 300.94)
+local HOOK_OFFSET   = Vector3.new(-11.45, 5, -11.18)
+local ROD_NAME      = "Basic Rod"
+local CAST_POWER    = 11.93  -- dari spill lo
 
-local Title = Instance.new("TextLabel")
-Title.Size = UDim2.new(1, 0, 0, 40)
-Title.BackgroundColor3 = Color3.fromRGB(0, 170, 255)
-Title.Text = "hamzHub - Fishzar"
-Title.TextColor3 = Color3.fromRGB(255, 255, 255)
-Title.TextScaled = true
-Title.Font = Enum.Font.GothamBold
-Title.Parent = MainFrame
+local AUTO_FISH = false
+local STATUS_TEXT = "Idle"
 
-local BlatiButton = Instance.new("TextButton")
-BlatiButton.Size = UDim2.new(0.9, 0, 0, 50)
-BlatiButton.Position = UDim2.new(0.05, 0, 0.35, 0)
-BlatiButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-BlatiButton.Text = "Blati OFF"
-BlatiButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-BlatiButton.TextScaled = true
-BlatiButton.Font = Enum.Font.GothamBold
-BlatiButton.Parent = MainFrame
-
-local StatusLabel = Instance.new("TextLabel")
-StatusLabel.Size = UDim2.new(0.9, 0, 0, 30)
-StatusLabel.Position = UDim2.new(0.05, 0, 0.7, 0)
-StatusLabel.BackgroundTransparency = 1
-StatusLabel.Text = "Status: Ready"
-StatusLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-StatusLabel.TextScaled = true
-StatusLabel.Font = Enum.Font.Gotham
-StatusLabel.Parent = MainFrame
-
-local CloseBtn = Instance.new("TextButton")
-CloseBtn.Size = UDim2.new(0, 30, 0, 30)
-CloseBtn.Position = UDim2.new(1, -35, 0, 5)
-CloseBtn.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-CloseBtn.Text = "X"
-CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-CloseBtn.TextScaled = true
-CloseBtn.Parent = MainFrame
-CloseBtn.MouseButton1Click:Connect(function()
-	ScreenGui:Destroy()
-end)
-
--- ==================== BLATI LOGIC ====================
-local autoFishing = false
-local fishingConnection = nil
-
-local function doInstantFish()
-	-- Kode yang lo kasih tadi (ReplicatePullAlert + PrecalcFish + CleanupCast)
-	local args = {
-		"rbxassetid://76503247176490"
-	}
-	
-	-- ReplicatePullAlert
-	local pullRemote = ReplicatedStorage:WaitForChild("FishingSystem"):WaitForChild("ReplicatePullAlert")
-	pullRemote:FireServer(unpack(args))
-	
-	-- PrecalcFish
-	local precalc = ReplicatedStorage:WaitForChild("FishingSystem"):WaitForChild("PrecalcFish")
-	precalc:InvokeServer()
-	
-	-- CleanupCast
-	local cleanup = ReplicatedStorage:WaitForChild("FishingSystem"):WaitForChild("CleanupCast")
-	cleanup:FireServer()
+local function safeFire(remote, ...)
+    pcall(function()
+        remote:FireServer(...)
+    end)
 end
 
-BlatiButton.MouseButton1Click:Connect(function()
-	autoFishing = not autoFishing
-	
-	if autoFishing then
-		BlatiButton.BackgroundColor3 = Color3.fromRGB(255, 0, 0)
-		BlatiButton.Text = "Blati ON (Instant Fishing)"
-		StatusLabel.Text = "Status: Blati ACTIVE - Auto Fishing"
-		
-		fishingConnection = game:GetService("RunService").Heartbeat:Connect(function()
-			if autoFishing then
-				doInstantFish()
-			end
-		end)
-	else
-		BlatiButton.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
-		BlatiButton.Text = "Blati OFF"
-		StatusLabel.Text = "Status: Ready"
-		
-		if fishingConnection then
-			fishingConnection:Disconnect()
-			fishingConnection = nil
-		end
-	end
+local function castRod()
+    STATUS_TEXT = "Casting..."
+    
+    safeFire(CleanupCast)
+    wait(0.3)
+    
+    safeFire(CastRepli, CAST_POSITION, HOOK_OFFSET, ROD_NAME, CAST_POWER)
+    
+    wait(math.random(4, 10))  -- tunggu bite (random biar natural)
+    
+    safeFire(ReplicatePull, "rbxassetid://76503247176490")
+    
+    local giverArgs = { hookPosition = CAST_POSITION }
+    safeFire(FishGiver, giverArgs)
+    
+    STATUS_TEXT = "Fish claimed! Waiting..."
+    wait(1.5)
+end
+
+-- Loop auto fish
+spawn(function()
+    while true do
+        if AUTO_FISH then
+            pcall(castRod)
+        end
+        wait(2)  -- delay antispam
+    end
 end)
 
--- ==================== NOTIF & INFO ====================
-print("✅ hamzHub loaded! Klik Blati buat instant fishing auto.")
-print("⚠️  Jangan terlalu cepet, kasih delay kecil biar ga kena rate limit.")
+-- LOAD KAVO UI
+local Library = loadstring(game:HttpGet("https://raw.githubusercontent.com/xHeptc/Kavo-UI-Library/main/source.lua"))()
 
--- Auto destroy kalau player leave (optional)
-player.CharacterRemoving:Connect(function()
-	ScreenGui:Destroy()
+local Window = Library.CreateLib("FISHZAR Pulau Nelayan Auto", "DarkTheme")  -- tema lain: LightTheme, Sentinel, Ocean, Midnight, dll
+
+local MainTab = Window:NewTab("Main")
+local MainSection = MainTab:NewSection("Auto Fishing Controls")
+
+MainSection:NewToggle("Auto Fish", "Nyala/Mati auto fishing", function(state)
+    AUTO_FISH = state
+    if state then
+        STATUS_TEXT = "Auto Fishing: ON"
+    else
+        STATUS_TEXT = "Auto Fishing: OFF"
+    end
 end)
+
+MainSection:NewButton("Manual Cast (Test)", "Coba lempar sekali", function()
+    castRod()
+end)
+
+MainSection:NewLabel("Status: ")
+local StatusLabel = MainSection:NewLabel(STATUS_TEXT)  -- update manual nanti
+
+-- Optional: Update label setiap detik (Kavo ga support auto update label gampang, jadi manual)
+spawn(function()
+    while wait(1) do
+        -- Kalo mau update status real-time, bisa recreate label atau pake notify
+        -- Untuk simple, pake Library:Notify aja pas change
+    end
+end)
+
+MainSection:NewLabel("Spot Cast: x="..math.floor(CAST_POSITION.X)..", y="..math.floor(CAST_POSITION.Y)..", z="..math.floor(CAST_POSITION.Z))
+MainSection:NewLabel("Delay per cycle: \~6-14 detik")
+
+-- Extra Tab kalo mau tambah fitur nanti
+local ExtraTab = Window:NewTab("Extra")
+ExtraTab:NewSection("Coming Soon: Auto Sell, TP Spot, dll")
+
+print("GUI FISHZAR nyala bro! Tekan RightShift buat hide/show")
+
+-- Optional: Notify selamat datang
+Library:Notify("FISHZAR Auto Loaded!", "Auto Fish ready. Toggle di GUI ya!", 5)
