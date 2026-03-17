@@ -1,4 +1,4 @@
--- INDO STRIKE AUTO FISH + BLATI GUI (2026) - SUPER CEPET VERSION
+-- HAMZHUB AUTO FISH + BLATI GUI (2026) - SUPER CEPET VERSION
 -- Execute pake executor lo (Fluxus/Delta/Wave/Solara dll)
 
 local Players = game:GetService("Players")
@@ -33,7 +33,7 @@ getgenv().Blati = false
 
 -- === GUI ===
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "IndoStrikeGUI"
+ScreenGui.Name = "HamzHubGUI"
 ScreenGui.Parent = player:WaitForChild("PlayerGui")
 ScreenGui.ResetOnSpawn = false
 
@@ -44,7 +44,7 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- Draggable (SUDAH DI-FIX BIAR BISA DIGESER KEMANA AJA, MOUSE KELUAR FRAME PUN TETEP NGIKUT)
+-- Draggable (bisa digeser kemana aja, mouse keluar frame pun tetep ngikut)
 local dragging = false
 local dragStart = nil
 local startPos = nil
@@ -76,7 +76,7 @@ end)
 local Title = Instance.new("TextLabel")
 Title.Size = UDim2.new(1, 0, 0, 50)
 Title.BackgroundTransparency = 1
-Title.Text = "INDO STRIKE AUTO"
+Title.Text = "HAMZHUB"
 Title.TextColor3 = Color3.fromRGB(0, 255, 100)
 Title.TextScaled = true
 Title.Font = Enum.Font.GothamBold
@@ -121,17 +121,16 @@ local function startAutoFish()
         while getgenv().AutoFish do
             if sessionID then
                 throwRemote:FireServer(0, sessionID)
-                task.wait(0.05)   -- SUPER CEPET (dari 0.7)
+                task.wait(0.05)   -- SUPER CEPET
                 minigameStarted:FireServer(sessionID)
-                task.wait(0.03)   -- SUPER CEPET (dari 0.3)
-                
+                task.wait(0.03)   -- SUPER CEPET
                 local successArgs = {
                     ["duration"] = math.random(7.5, 12.5),
                     ["result"] = "SUCCESS",
                     ["insideRatio"] = 0.8 + (math.random(3, 18) / 100)
                 }
                 reelFinished:FireServer(successArgs, sessionID)
-                task.wait(0.1)    -- SUPER CEPET (dari 1.5)
+                task.wait(0.1)    -- SUPER CEPET
             else
                 task.wait(0.1)
             end
@@ -167,4 +166,4 @@ BlatiBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-print("🎉 GUI Indo Strike SUPER CEPET udah muncul! Cast manual 1x dulu biar sessionID ke-capture. Mancing sekarang gila cepetnya bro!")
+print("🎉 GUI HAMZHUB SUPER CEPET udah muncul! Cast manual 1x dulu biar sessionID ke-capture. Mancing sekarang gila cepetnya bro!")
