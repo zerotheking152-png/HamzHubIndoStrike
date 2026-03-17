@@ -1,8 +1,9 @@
--- INDO STRIKE AUTO FISH + BLATI GUI (2026)
+-- INDO STRIKE AUTO FISH + BLATI GUI (2026) - SUPER CEPET VERSION
 -- Execute pake executor lo (Fluxus/Delta/Wave/Solara dll)
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 
 -- === REMOTES ===
@@ -43,8 +44,11 @@ MainFrame.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
 
--- Draggable
-local dragging, dragInput, dragStart, startPos
+-- Draggable (SUDAH DI-FIX BIAR BISA DIGESER KEMANA AJA, MOUSE KELUAR FRAME PUN TETEP NGIKUT)
+local dragging = false
+local dragStart = nil
+local startPos = nil
+
 MainFrame.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -52,14 +56,21 @@ MainFrame.InputBegan:Connect(function(input)
         startPos = MainFrame.Position
     end
 end)
-MainFrame.InputChanged:Connect(function(input)
+
+UserInputService.InputChanged:Connect(function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
-        MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        MainFrame.Position = UDim2.new(
+            startPos.X.Scale, startPos.X.Offset + delta.X,
+            startPos.Y.Scale, startPos.Y.Offset + delta.Y
+        )
     end
 end)
-game:GetService("UserInputService").InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then dragging = false end
+
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = false
+    end
 end)
 
 local Title = Instance.new("TextLabel")
@@ -110,9 +121,9 @@ local function startAutoFish()
         while getgenv().AutoFish do
             if sessionID then
                 throwRemote:FireServer(0, sessionID)
-                task.wait(0.7)
+                task.wait(0.05)   -- SUPER CEPET (dari 0.7)
                 minigameStarted:FireServer(sessionID)
-                task.wait(0.3)
+                task.wait(0.03)   -- SUPER CEPET (dari 0.3)
                 
                 local successArgs = {
                     ["duration"] = math.random(7.5, 12.5),
@@ -120,9 +131,9 @@ local function startAutoFish()
                     ["insideRatio"] = 0.8 + (math.random(3, 18) / 100)
                 }
                 reelFinished:FireServer(successArgs, sessionID)
-                task.wait(1.5)
+                task.wait(0.1)    -- SUPER CEPET (dari 1.5)
             else
-                task.wait(0.5)
+                task.wait(0.1)
             end
         end
     end)
@@ -134,7 +145,7 @@ AutoFishBtn.MouseButton1Click:Connect(function()
         AutoFishBtn.Text = "Auto Fish: ON"
         AutoFishBtn.BackgroundColor3 = Color3.fromRGB(0, 200, 0)
         startAutoFish()
-        Status.Text = "Auto Fish JALAN 🔥"
+        Status.Text = "Auto Fish JALAN 🔥 (SUPER CEPET)"
     else
         AutoFishBtn.Text = "Auto Fish: OFF"
         AutoFishBtn.BackgroundColor3 = Color3.fromRGB(200, 0, 0)
@@ -156,4 +167,4 @@ BlatiBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-print("🎉 GUI Indo Strike udah muncul! Cast manual 1x dulu biar sessionID ke-capture.")
+print("🎉 GUI Indo Strike SUPER CEPET udah muncul! Cast manual 1x dulu biar sessionID ke-capture. Mancing sekarang gila cepetnya bro!")
