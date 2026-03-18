@@ -92,9 +92,9 @@ local function startBlati()
                     ["isSecret"] = true
                 }
                 reelFinished:FireServer(successArgs, sessionID)
-                task.wait(0.00001)
+                task.wait(0.0001)
             else
-                task.wait(0.00001)
+                task.wait(0.0001)
             end
         end
     end)
