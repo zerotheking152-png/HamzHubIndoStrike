@@ -210,7 +210,7 @@ PlayerTab:CreateInput({
 })
 
 PlayerTab:CreateToggle({
-    Name = "AUTO SELL",
+    Name = "Sell Count",
     CurrentValue = false,
     Flag = "AutoSellFlag",
     Callback = function(Value)
