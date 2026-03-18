@@ -33,12 +33,12 @@ end))
 
 -- === FLAGS ===
 getgenv().Blati = false
-getgenv().ForceSecret = false
 getgenv().InfiniteJump = false
 getgenv().Noclip = false
 getgenv().WalkSpeedValue = 16
 getgenv().AutoSell = false
-getgenv().SellInterval = 180  -- default 3 menit (bisa diubah lewat box)
+getgenv().SellCount = 1
+getgenv().CatchCount = 0
 
 -- === CHARACTER SETUP ===
 local humanoid = nil
@@ -73,6 +73,8 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("MAIN", 4483362458)
 local PlayerTab = Window:CreateTab("PLAYER", 4483362458)
 
+MainTab:CreateLabel("MANCING MANUAL 1 KALI, BARU IDUPIN BLATI, LEVI KIKIR")
+
 -- === BLATI (Instant Fishing SUPER CEPET + SECRET) ===
 local blatiLoop
 local function startBlati()
@@ -80,21 +82,28 @@ local function startBlati()
     blatiLoop = task.spawn(function()
         while getgenv().Blati do
             if sessionID and humanoid then
-                throwRemote:FireServer(0, sessionID)
-                task.wait(0.00001)
-                minigameStarted:FireServer(sessionID)
-                task.wait(0.00001)
-                local successArgs = {
-                    ["duration"] = math.random(7.5, 12.5),
-                    ["result"] = "SUCCESS",
-                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
-                    ["catchType"] = "SECRET",
-                    ["isSecret"] = true
-                }
-                reelFinished:FireServer(successArgs, sessionID)
-                task.wait(0.00001)
+                pcall(function()
+                    throwRemote:FireServer(0, sessionID)
+                    minigameStarted:FireServer(sessionID)
+                    local successArgs = {
+                        ["duration"] = math.random(7.5, 12.5),
+                        ["result"] = "SUCCESS",
+                        ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
+                        ["catchType"] = "SECRET",
+                        ["isSecret"] = true
+                    }
+                    reelFinished:FireServer(successArgs, sessionID)
+                end)
+                getgenv().CatchCount = getgenv().CatchCount + 1
+                if getgenv().AutoSell and getgenv().CatchCount >= getgenv().SellCount then
+                    pcall(function()
+                        sellRemote:FireServer(800)
+                    end)
+                    getgenv().CatchCount = 0
+                end
+                task.wait(0.0000001)
             else
-                task.wait(0.00001)
+                task.wait(0.1)
             end
         end
     end)
@@ -114,51 +123,6 @@ MainTab:CreateToggle({
 game:GetService("ReplicatedStorage"):WaitForChild("FishUI"):WaitForChild("ToServer"):WaitForChild("ToggleFavorite"):FireServer(unpack(args))
         else
             if blatiLoop then task.cancel(blatiLoop) blatiLoop = nil end
-        end
-    end,
-})
-
--- === FORCE SECRET (Instant Fishing Secret) ===
-local forceSecretLoop
-local function startForceSecret()
-    if forceSecretLoop then return end
-    forceSecretLoop = task.spawn(function()
-        while getgenv().ForceSecret do
-            if sessionID and humanoid then
-                throwRemote:FireServer(0, sessionID)
-                task.wait(0.00001)
-                minigameStarted:FireServer(sessionID)
-                task.wait(0.00001)
-                local successArgs = {
-                    ["duration"] = math.random(7.5, 12.5),
-                    ["result"] = "SUCCESS",
-                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
-                    ["catchType"] = "SECRET",
-                    ["isSecret"] = true
-                }
-                reelFinished:FireServer(successArgs, sessionID)
-                task.wait(0.00001)
-            else
-                task.wait(0.00001)
-            end
-        end
-    end)
-end
-
-MainTab:CreateToggle({
-    Name = "FORCE SECRET (Instant Fishing Secret)",
-    CurrentValue = false,
-    Flag = "ForceSecretFlag",
-    Callback = function(Value)
-        getgenv().ForceSecret = Value
-        if Value then
-            startForceSecret()
-            local args = {
-	"bd4238ec-6bbc-4523-8c63-a17356e1f130"
-}
-game:GetService("ReplicatedStorage"):WaitForChild("FishUI"):WaitForChild("ToServer"):WaitForChild("ToggleFavorite"):FireServer(unpack(args))
-        else
-            if forceSecretLoop then task.cancel(forceSecretLoop) forceSecretLoop = nil end
         end
     end,
 })
@@ -232,31 +196,18 @@ PlayerTab:CreateInput({
 })
 
 PlayerTab:CreateInput({
-    Name = "Sell Every (min)",
-    CurrentValue = "3",
-    PlaceholderText = "3",
+    Name = "Sell Every (count)",
+    CurrentValue = "1",
+    PlaceholderText = "1",
     RemoveTextAfterFocusLost = false,
     Flag = "SellIntervalFlag",
     Callback = function(Text)
         local val = tonumber(Text)
-        if val and val >= 1 and val <= 200 then
-            getgenv().SellInterval = val * 60
+        if val and val >= 1 and val <= 3000 then
+            getgenv().SellCount = val
         end
     end,
 })
-
-local autoSellLoop
-local function startAutoSell()
-    if autoSellLoop then return end
-    autoSellLoop = task.spawn(function()
-        while getgenv().AutoSell do
-            if sellRemote then
-                sellRemote:FireServer(1000)
-            end
-            task.wait(getgenv().SellInterval)
-        end
-    end)
-end
 
 PlayerTab:CreateToggle({
     Name = "AUTO SELL",
@@ -264,11 +215,130 @@ PlayerTab:CreateToggle({
     Flag = "AutoSellFlag",
     Callback = function(Value)
         getgenv().AutoSell = Value
-        if Value then
-            startAutoSell()
-        else
-            if autoSellLoop then task.cancel(autoSellLoop) autoSellLoop = nil end
+        if not Value then
+            getgenv().CatchCount = 0
         end
+    end,
+})
+
+local MiscTab = Window:CreateTab("Misc", 4483362458)
+
+-- === STATS PANEL (FPS + PING + MEMORY/CPU PROXY) ===
+local StatsGui = Instance.new("ScreenGui")
+StatsGui.Name = "HamzStatsPanel"
+StatsGui.ResetOnSpawn = false
+StatsGui.Parent = player:WaitForChild("PlayerGui")
+
+local MainFrame = Instance.new("Frame")
+MainFrame.Size = UDim2.new(0, 220, 0, 120)
+MainFrame.Position = UDim2.new(1, -230, 0, 10)
+MainFrame.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+MainFrame.BackgroundTransparency = 0.3
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = StatsGui
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 8)
+Corner.Parent = MainFrame
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1, 0, 0, 25)
+Title.BackgroundTransparency = 1
+Title.Text = "📊 HAMZHUB STATS"
+Title.TextColor3 = Color3.fromRGB(0, 255, 100)
+Title.TextScaled = true
+Title.Font = Enum.Font.GothamBold
+Title.Parent = MainFrame
+
+local FPSLabel = Instance.new("TextLabel")
+FPSLabel.Size = UDim2.new(1, 0, 0, 25)
+FPSLabel.Position = UDim2.new(0, 0, 0, 30)
+FPSLabel.BackgroundTransparency = 1
+FPSLabel.Text = "FPS: 60"
+FPSLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+FPSLabel.TextScaled = true
+FPSLabel.Font = Enum.Font.Gotham
+FPSLabel.Parent = MainFrame
+
+local PingLabel = Instance.new("TextLabel")
+PingLabel.Size = UDim2.new(1, 0, 0, 25)
+PingLabel.Position = UDim2.new(0, 0, 0, 55)
+PingLabel.BackgroundTransparency = 1
+PingLabel.Text = "Ping: 25 ms"
+PingLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+PingLabel.TextScaled = true
+PingLabel.Font = Enum.Font.Gotham
+PingLabel.Parent = MainFrame
+
+local MemLabel = Instance.new("TextLabel")
+MemLabel.Size = UDim2.new(1, 0, 0, 25)
+MemLabel.Position = UDim2.new(0, 0, 0, 80)
+MemLabel.BackgroundTransparency = 1
+MemLabel.Text = "Memory: 420 MB"
+MemLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+MemLabel.TextScaled = true
+MemLabel.Font = Enum.Font.Gotham
+MemLabel.Parent = MainFrame
+
+-- Dragable
+local dragging, dragInput, mousePos, framePos
+MainFrame.InputBegan:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
+        dragging = true
+        mousePos = input.Position
+        framePos = MainFrame.Position
+        input.Changed:Connect(function()
+            if input.UserInputState == Enum.UserInputState.End then dragging = false end
+        end)
+    end
+end)
+
+MainFrame.InputChanged:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseMovement then dragInput = input end
+end)
+
+game:GetService("UserInputService").InputChanged:Connect(function(input)
+    if input == dragInput and dragging then
+        local delta = input.Position - mousePos
+        MainFrame.Position = UDim2.new(framePos.X.Scale, framePos.X.Offset + delta.X, framePos.Y.Scale, framePos.Y.Offset + delta.Y)
+    end
+end)
+
+-- Update Loop (SUPER CEPET & STABIL)
+local StatsService = game:GetService("Stats")
+local lastTick = tick()
+local frameCount = 0
+
+RunService.RenderStepped:Connect(function()
+    frameCount = frameCount + 1
+end)
+
+task.spawn(function()
+    while true do
+        local now = tick()
+        if now - lastTick >= 1 then
+            local fps = math.floor(frameCount / (now - lastTick))
+            FPSLabel.Text = "FPS: " .. fps
+
+            local pingValue = StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+            PingLabel.Text = "Ping: " .. math.floor(pingValue) .. " ms"
+
+            local mem = math.floor(StatsService:GetMemoryUsageMbForTag(Enum.DeveloperMemoryTag.Total))
+            MemLabel.Text = "Memory: " .. mem .. " MB"
+
+            frameCount = 0
+            lastTick = now
+        end
+        task.wait(0.1)
+    end
+end)
+
+MiscTab:CreateToggle({
+    Name = "PANEL BLATI",
+    CurrentValue = true,
+    Flag = "PanelBlatiFlag",
+    Callback = function(Value)
+        StatsGui.Enabled = Value
     end,
 })
 
@@ -376,6 +446,7 @@ end)
 local rodEquipLoop = task.spawn(function()
     while true do
         if getgenv().Blati and player.Character then
+            game:GetService("ReplicatedStorage"):WaitForChild("RodShop"):WaitForChild("ToServer"):WaitForChild("RemoveHolsteredRod"):FireServer()
             local toolInHand = player.Character:FindFirstChildOfClass("Tool")
             if not toolInHand then
                 local backpackTool = player.Backpack:FindFirstChildOfClass("Tool")
