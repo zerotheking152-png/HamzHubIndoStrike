@@ -82,24 +82,28 @@ local function startBlati()
     blatiLoop = task.spawn(function()
         while getgenv().Blati do
             if sessionID and humanoid then
-                throwRemote:FireServer(0, sessionID)
-                minigameStarted:FireServer(sessionID)
-                local successArgs = {
-                    ["duration"] = math.random(7.5, 12.5),
-                    ["result"] = "SUCCESS",
-                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
-                    ["catchType"] = "SECRET",
-                    ["isSecret"] = true
-                }
-                reelFinished:FireServer(successArgs, sessionID)
+                pcall(function()
+                    throwRemote:FireServer(0, sessionID)
+                    minigameStarted:FireServer(sessionID)
+                    local successArgs = {
+                        ["duration"] = math.random(7.5, 12.5),
+                        ["result"] = "SUCCESS",
+                        ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
+                        ["catchType"] = "SECRET",
+                        ["isSecret"] = true
+                    }
+                    reelFinished:FireServer(successArgs, sessionID)
+                end)
                 getgenv().CatchCount = getgenv().CatchCount + 1
                 if getgenv().AutoSell and getgenv().CatchCount >= getgenv().SellCount then
-                    sellRemote:FireServer(800)
+                    pcall(function()
+                        sellRemote:FireServer(800)
+                    end)
                     getgenv().CatchCount = 0
                 end
-                task.wait(0.000001)
+                task.wait(0.0000001)
             else
-                task.wait(0.000001)
+                task.wait(0.1)
             end
         end
     end)
