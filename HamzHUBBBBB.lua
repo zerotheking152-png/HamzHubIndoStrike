@@ -33,12 +33,12 @@ end))
 
 -- === FLAGS ===
 getgenv().Blati = false
+getgenv().ForceSecret = false
 getgenv().InfiniteJump = false
 getgenv().Noclip = false
 getgenv().WalkSpeedValue = 16
 getgenv().AutoSell = false
-getgenv().SellCount = 1
-getgenv().CatchCount = 0
+getgenv().SellInterval = 180  -- default 3 menit (bisa diubah lewat box)
 
 -- === CHARACTER SETUP ===
 local humanoid = nil
@@ -73,8 +73,6 @@ local Window = Rayfield:CreateWindow({
 local MainTab = Window:CreateTab("MAIN", 4483362458)
 local PlayerTab = Window:CreateTab("PLAYER", 4483362458)
 
-MainTab:CreateLabel("MANCING MANUAL 1 KALI, BARU IDUPIN BLATI, LEVI KIKIR")
-
 -- === BLATI (Instant Fishing SUPER CEPET + SECRET) ===
 local blatiLoop
 local function startBlati()
@@ -82,28 +80,21 @@ local function startBlati()
     blatiLoop = task.spawn(function()
         while getgenv().Blati do
             if sessionID and humanoid then
-                pcall(function()
-                    throwRemote:FireServer(0, sessionID)
-                    minigameStarted:FireServer(sessionID)
-                    local successArgs = {
-                        ["duration"] = math.random(7.5, 12.5),
-                        ["result"] = "SUCCESS",
-                        ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
-                        ["catchType"] = "SECRET",
-                        ["isSecret"] = true
-                    }
-                    reelFinished:FireServer(successArgs, sessionID)
-                end)
-                getgenv().CatchCount = getgenv().CatchCount + 1
-                if getgenv().AutoSell and getgenv().CatchCount >= getgenv().SellCount then
-                    pcall(function()
-                        sellRemote:FireServer(800)
-                    end)
-                    getgenv().CatchCount = 0
-                end
-                task.wait(0.0000001)
+                throwRemote:FireServer(0, sessionID)
+                task.wait(0.00001)
+                minigameStarted:FireServer(sessionID)
+                task.wait(0.00001)
+                local successArgs = {
+                    ["duration"] = math.random(7.5, 12.5),
+                    ["result"] = "SUCCESS",
+                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
+                    ["catchType"] = "SECRET",
+                    ["isSecret"] = true
+                }
+                reelFinished:FireServer(successArgs, sessionID)
+                task.wait(0.00001)
             else
-                task.wait(0.1)
+                task.wait(0.00001)
             end
         end
     end)
@@ -123,6 +114,51 @@ MainTab:CreateToggle({
 game:GetService("ReplicatedStorage"):WaitForChild("FishUI"):WaitForChild("ToServer"):WaitForChild("ToggleFavorite"):FireServer(unpack(args))
         else
             if blatiLoop then task.cancel(blatiLoop) blatiLoop = nil end
+        end
+    end,
+})
+
+-- === FORCE SECRET (Instant Fishing Secret) ===
+local forceSecretLoop
+local function startForceSecret()
+    if forceSecretLoop then return end
+    forceSecretLoop = task.spawn(function()
+        while getgenv().ForceSecret do
+            if sessionID and humanoid then
+                throwRemote:FireServer(0, sessionID)
+                task.wait(0.00001)
+                minigameStarted:FireServer(sessionID)
+                task.wait(0.00001)
+                local successArgs = {
+                    ["duration"] = math.random(7.5, 12.5),
+                    ["result"] = "SUCCESS",
+                    ["insideRatio"] = 0.8 + (math.random(3, 18) / 100),
+                    ["catchType"] = "SECRET",
+                    ["isSecret"] = true
+                }
+                reelFinished:FireServer(successArgs, sessionID)
+                task.wait(0.00001)
+            else
+                task.wait(0.00001)
+            end
+        end
+    end)
+end
+
+MainTab:CreateToggle({
+    Name = "FORCE SECRET (Instant Fishing Secret)",
+    CurrentValue = false,
+    Flag = "ForceSecretFlag",
+    Callback = function(Value)
+        getgenv().ForceSecret = Value
+        if Value then
+            startForceSecret()
+            local args = {
+	"bd4238ec-6bbc-4523-8c63-a17356e1f130"
+}
+game:GetService("ReplicatedStorage"):WaitForChild("FishUI"):WaitForChild("ToServer"):WaitForChild("ToggleFavorite"):FireServer(unpack(args))
+        else
+            if forceSecretLoop then task.cancel(forceSecretLoop) forceSecretLoop = nil end
         end
     end,
 })
@@ -196,18 +232,31 @@ PlayerTab:CreateInput({
 })
 
 PlayerTab:CreateInput({
-    Name = "Sell Every (count)",
-    CurrentValue = "1",
-    PlaceholderText = "1",
+    Name = "Sell Every (min)",
+    CurrentValue = "3",
+    PlaceholderText = "3",
     RemoveTextAfterFocusLost = false,
     Flag = "SellIntervalFlag",
     Callback = function(Text)
         local val = tonumber(Text)
         if val and val >= 1 and val <= 200 then
-            getgenv().SellCount = val
+            getgenv().SellInterval = val * 60
         end
     end,
 })
+
+local autoSellLoop
+local function startAutoSell()
+    if autoSellLoop then return end
+    autoSellLoop = task.spawn(function()
+        while getgenv().AutoSell do
+            if sellRemote then
+                sellRemote:FireServer(1000)
+            end
+            task.wait(getgenv().SellInterval)
+        end
+    end)
+end
 
 PlayerTab:CreateToggle({
     Name = "AUTO SELL",
@@ -215,8 +264,10 @@ PlayerTab:CreateToggle({
     Flag = "AutoSellFlag",
     Callback = function(Value)
         getgenv().AutoSell = Value
-        if not Value then
-            getgenv().CatchCount = 0
+        if Value then
+            startAutoSell()
+        else
+            if autoSellLoop then task.cancel(autoSellLoop) autoSellLoop = nil end
         end
     end,
 })
